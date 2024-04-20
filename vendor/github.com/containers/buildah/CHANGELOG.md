@@ -2,6 +2,29 @@
 
 # Changelog
 
+## v1.31.5 (2024-03-28)
+
+    [release-1.31] CVE-2024-1753 container escape fix
+    [release-1.31] conformance tests: don't break on trailing zeroes
+    [release-1.31] Bump google.golang.org/protobuf to v1.33.0
+    [release-1.31] Bump golang.org/x/crypto v0.17.0
+
+## v1.31.4 (2023-10-30)
+    Mask /sys/devices/virtual/powercap by default
+
+## v1.31.3 (2023-08-24)
+    [release-1.31] Bump c/common 0.55.4, c/image 5.26.2, c/storage 1.48.1
+    rpm: spdx compatible license field
+    RPM: fix buildtags
+
+## v1.31.2 (2023-08-10)
+    [release-1.31] Bump to v1.31.2
+
+## v1.31.1 (2023-08-09)
+    [release-1.31] Remove zstd:chunked from man, bump c/common to v0.55.3
+    CI:BUILD] RPM: define gobuild macro for rhel/centos stream
+    [release-1.31] Bump c/common
+
 ## v1.31.0 (2023-06-30)
 
     Bump c/common to 0.55.1 and c/image to 5.26.1

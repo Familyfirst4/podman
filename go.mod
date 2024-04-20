@@ -12,10 +12,10 @@ require (
 	github.com/container-orchestrated-devices/container-device-interface v0.6.0
 	github.com/containernetworking/cni v1.1.2
 	github.com/containernetworking/plugins v1.3.0
-	github.com/containers/buildah v1.31.1-0.20230722114901-5ece066f82c6
-	github.com/containers/common v0.55.1-0.20230829104013-4a76f1739d43
+	github.com/containers/buildah v1.31.5
+	github.com/containers/common v0.55.4
 	github.com/containers/conmon v2.0.20+incompatible
-	github.com/containers/image/v5 v5.26.1-0.20230807184415-3fb422379cfa
+	github.com/containers/image/v5 v5.26.2
 	github.com/containers/libhvee v0.4.1-0.20230816135538-b81ee3f10e1e
 	github.com/containers/ocicrypt v1.1.8
 	github.com/containers/psgo v1.8.0
@@ -65,10 +65,10 @@ require (
 	golang.org/x/exp v0.0.0-20230801115018-d63ba01acd4b
 	golang.org/x/net v0.14.0
 	golang.org/x/sync v0.3.0
-	golang.org/x/sys v0.11.0
-	golang.org/x/term v0.11.0
-	golang.org/x/text v0.12.0
-	google.golang.org/protobuf v1.31.0
+	golang.org/x/sys v0.15.0
+	golang.org/x/term v0.15.0
+	golang.org/x/text v0.14.0
+	google.golang.org/protobuf v1.33.0
 	gopkg.in/inf.v0 v0.9.1
 	gopkg.in/yaml.v3 v3.0.1
 	k8s.io/kubernetes v1.28.1
@@ -184,7 +184,7 @@ require (
 	go.opentelemetry.io/otel/metric v1.16.0 // indirect
 	go.opentelemetry.io/otel/trace v1.16.0 // indirect
 	golang.org/x/arch v0.3.0 // indirect
-	golang.org/x/crypto v0.12.0 // indirect
+	golang.org/x/crypto v0.17.0 // indirect
 	golang.org/x/mod v0.12.0 // indirect
 	golang.org/x/oauth2 v0.11.0 // indirect
 	golang.org/x/tools v0.12.0 // indirect
