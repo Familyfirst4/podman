@@ -32,9 +32,14 @@ Restart VM after applying changes.
 
 ## EXAMPLES
 
+Update the default Podman machine to the specified bootable OCI image.
 ```
 $ podman machine os apply quay.io/podman_next
-$ podman machine os apply quay.io/podman_next podman-machine-defualt
+```
+
+Update the specified Podman machine to the specified bootable OCI image.
+```
+$ podman machine os apply quay.io/podman_next podman-machine-default
 ```
 
 ## SEE ALSO
