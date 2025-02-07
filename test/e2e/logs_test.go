@@ -1,3 +1,5 @@
+//go:build linux || freebsd
+
 package integration
 
 import (
@@ -6,7 +8,7 @@ import (
 	"os/exec"
 	"time"
 
-	. "github.com/containers/podman/v4/test/utils"
+	. "github.com/containers/podman/v5/test/utils"
 	"github.com/containers/storage/pkg/stringid"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -29,13 +31,10 @@ var _ = Describe("Podman logs", func() {
 	It("podman logs on not existent container", func() {
 		results := podmanTest.Podman([]string{"logs", "notexist"})
 		results.WaitWithDefaultTimeout()
-		Expect(results).To(Exit(125))
-		Expect(results.ErrorToString()).To(Equal(`Error: no container with name or ID "notexist" found: no such container`))
+		Expect(results).To(ExitWithError(125, `no container with name or ID "notexist" found: no such container`))
 	})
 
 	for _, log := range []string{"k8s-file", "journald", "json-file"} {
-		// This is important to move the 'log' var to the correct scope under Ginkgo flow.
-		log := log
 
 		// Flake prevention: journalctl makes no timeliness guarantees
 		logTimeout := time.Millisecond
@@ -54,17 +53,17 @@ var _ = Describe("Podman logs", func() {
 
 			logc := podmanTest.Podman([]string{"run", "--log-driver", log, "-dt", ALPINE, "sh", "-c", "echo podman; echo podman; echo podman"})
 			logc.WaitWithDefaultTimeout()
-			Expect(logc).To(Exit(0))
+			Expect(logc).To(ExitCleanly())
 			cid := logc.OutputToString()
 
 			results := podmanTest.Podman([]string{"wait", cid})
 			results.WaitWithDefaultTimeout()
-			Expect(results).To(Exit(0))
+			Expect(results).To(ExitCleanly())
 
 			Eventually(func(g Gomega) {
 				results = podmanTest.Podman([]string{"logs", cid})
 				results.WaitWithDefaultTimeout()
-				g.Expect(results).To(Exit(0))
+				g.Expect(results).To(ExitCleanly())
 				g.Expect(results.OutputToStringArray()).To(HaveLen(3))
 				g.Expect(results.OutputToString()).To(Equal("podman podman podman"))
 			}).WithTimeout(logTimeout).Should(Succeed())
@@ -75,17 +74,17 @@ var _ = Describe("Podman logs", func() {
 
 			logc := podmanTest.Podman([]string{"run", "--log-driver", log, "-dt", ALPINE, "sh", "-c", "echo podman; echo podman; echo podman"})
 			logc.WaitWithDefaultTimeout()
-			Expect(logc).To(Exit(0))
+			Expect(logc).To(ExitCleanly())
 			cid := logc.OutputToString()
 
 			wait := podmanTest.Podman([]string{"wait", cid})
 			wait.WaitWithDefaultTimeout()
-			Expect(wait).To(Exit(0))
+			Expect(wait).To(ExitCleanly())
 
 			Eventually(func(g Gomega) {
 				results := podmanTest.Podman([]string{"logs", "--tail", "2", cid})
 				results.WaitWithDefaultTimeout()
-				g.Expect(results).To(Exit(0))
+				g.Expect(results).To(ExitCleanly())
 				g.Expect(results.OutputToStringArray()).To(HaveLen(2))
 				g.Expect(results.OutputToString()).To(Equal("podman podman"))
 			}).WithTimeout(logTimeout).Should(Succeed())
@@ -96,17 +95,17 @@ var _ = Describe("Podman logs", func() {
 
 			logc := podmanTest.Podman([]string{"run", "--log-driver", log, "-dt", ALPINE, "sh", "-c", "echo podman; echo podman; echo podman"})
 			logc.WaitWithDefaultTimeout()
-			Expect(logc).To(Exit(0))
+			Expect(logc).To(ExitCleanly())
 			cid := logc.OutputToString()
 
 			wait := podmanTest.Podman([]string{"wait", cid})
 			wait.WaitWithDefaultTimeout()
-			Expect(wait).To(Exit(0))
+			Expect(wait).To(ExitCleanly())
 
 			time.Sleep(logTimeout)
 			results := podmanTest.Podman([]string{"logs", "--tail", "0", cid})
 			results.WaitWithDefaultTimeout()
-			Expect(results).To(Exit(0))
+			Expect(results).To(ExitCleanly())
 			Expect(results.OutputToStringArray()).To(BeEmpty())
 		})
 
@@ -116,16 +115,16 @@ var _ = Describe("Podman logs", func() {
 			name := "test1"
 			logc := podmanTest.Podman([]string{"run", "--name", name, "--log-driver", log, ALPINE, "sh", "-c", "echo podman; echo podman; echo podman"})
 			logc.WaitWithDefaultTimeout()
-			Expect(logc).To(Exit(0))
+			Expect(logc).To(ExitCleanly())
 
 			wait := podmanTest.Podman([]string{"wait", name})
 			wait.WaitWithDefaultTimeout()
-			Expect(wait).To(Exit(0))
+			Expect(wait).To(ExitCleanly())
 
 			Eventually(func(g Gomega) {
 				results := podmanTest.Podman([]string{"logs", "--tail", "99", name})
 				results.WaitWithDefaultTimeout()
-				g.Expect(results).To(Exit(0))
+				g.Expect(results).To(ExitCleanly())
 				g.Expect(results.OutputToStringArray()).To(HaveLen(3))
 			}).WithTimeout(logTimeout).Should(Succeed())
 		})
@@ -146,18 +145,18 @@ var _ = Describe("Podman logs", func() {
 			// this uses -d so that we do not have 1000 unnecessary lines printed in every test log
 			logc := podmanTest.Podman([]string{"run", "--log-driver", log, "-d", ALPINE, "sh", "-c", "i=1; while [ \"$i\" -ne 1000 ]; do echo \"line $i\"; i=$((i + 1)); done"})
 			logc.WaitWithDefaultTimeout()
-			Expect(logc).To(Exit(0))
+			Expect(logc).To(ExitCleanly())
 			cid := logc.OutputToString()
 
 			// make sure we wait for the container to finish writing its output
 			wait := podmanTest.Podman([]string{"wait", cid})
 			wait.WaitWithDefaultTimeout()
-			Expect(wait).To(Exit(0))
+			Expect(wait).To(ExitCleanly())
 
 			Eventually(func(g Gomega) {
 				results := podmanTest.Podman([]string{"logs", "--tail", "800", cid})
 				results.WaitWithDefaultTimeout()
-				g.Expect(results).To(Exit(0))
+				g.Expect(results).To(ExitCleanly())
 				g.Expect(results.OutputToStringArray()).To(HaveLen(800))
 			}).WithTimeout(logTimeout).Should(Succeed())
 		})
@@ -167,17 +166,17 @@ var _ = Describe("Podman logs", func() {
 
 			logc := podmanTest.Podman([]string{"run", "--log-driver", log, "-dt", ALPINE, "sh", "-c", "echo podman; echo podman; echo podman"})
 			logc.WaitWithDefaultTimeout()
-			Expect(logc).To(Exit(0))
+			Expect(logc).To(ExitCleanly())
 			cid := logc.OutputToString()
 
 			wait := podmanTest.Podman([]string{"wait", cid})
 			wait.WaitWithDefaultTimeout()
-			Expect(wait).To(Exit(0))
+			Expect(wait).To(ExitCleanly())
 
 			Eventually(func(g Gomega) {
 				results := podmanTest.Podman([]string{"logs", "--tail", "2", "-t", cid})
 				results.WaitWithDefaultTimeout()
-				g.Expect(results).To(Exit(0))
+				g.Expect(results).To(ExitCleanly())
 				g.Expect(results.OutputToStringArray()).To(HaveLen(2))
 			}).WithTimeout(logTimeout).Should(Succeed())
 		})
@@ -187,17 +186,17 @@ var _ = Describe("Podman logs", func() {
 
 			logc := podmanTest.Podman([]string{"run", "--log-driver", log, "-dt", ALPINE, "sh", "-c", "echo podman; echo podman; echo podman"})
 			logc.WaitWithDefaultTimeout()
-			Expect(logc).To(Exit(0))
+			Expect(logc).To(ExitCleanly())
 			cid := logc.OutputToString()
 
 			wait := podmanTest.Podman([]string{"wait", cid})
 			wait.WaitWithDefaultTimeout()
-			Expect(wait).To(Exit(0))
+			Expect(wait).To(ExitCleanly())
 
 			Eventually(func(g Gomega) {
 				results := podmanTest.Podman([]string{"logs", "--since", "2017-08-07T10:10:09.056611202-04:00", cid})
 				results.WaitWithDefaultTimeout()
-				g.Expect(results).To(Exit(0))
+				g.Expect(results).To(ExitCleanly())
 				g.Expect(results.OutputToStringArray()).To(HaveLen(3))
 			}).WithTimeout(logTimeout).Should(Succeed())
 		})
@@ -207,17 +206,17 @@ var _ = Describe("Podman logs", func() {
 
 			logc := podmanTest.Podman([]string{"run", "--log-driver", log, "-dt", ALPINE, "sh", "-c", "echo podman; echo podman; echo podman"})
 			logc.WaitWithDefaultTimeout()
-			Expect(logc).To(Exit(0))
+			Expect(logc).To(ExitCleanly())
 			cid := logc.OutputToString()
 
 			wait := podmanTest.Podman([]string{"wait", cid})
 			wait.WaitWithDefaultTimeout()
-			Expect(wait).To(Exit(0))
+			Expect(wait).To(ExitCleanly())
 
 			Eventually(func(g Gomega) {
 				results := podmanTest.Podman([]string{"logs", "--since", "10m", cid})
 				results.WaitWithDefaultTimeout()
-				g.Expect(results).To(Exit(0))
+				g.Expect(results).To(ExitCleanly())
 				g.Expect(results.OutputToStringArray()).To(HaveLen(3))
 			}).WithTimeout(logTimeout).Should(Succeed())
 		})
@@ -227,17 +226,17 @@ var _ = Describe("Podman logs", func() {
 
 			logc := podmanTest.Podman([]string{"run", "--log-driver", log, "-dt", ALPINE, "sh", "-c", "echo podman; echo podman; echo podman"})
 			logc.WaitWithDefaultTimeout()
-			Expect(logc).To(Exit(0))
+			Expect(logc).To(ExitCleanly())
 			cid := logc.OutputToString()
 
 			wait := podmanTest.Podman([]string{"wait", cid})
 			wait.WaitWithDefaultTimeout()
-			Expect(wait).To(Exit(0))
+			Expect(wait).To(ExitCleanly())
 
 			Eventually(func(g Gomega) {
 				results := podmanTest.Podman([]string{"logs", "--until", "10m", cid})
 				results.WaitWithDefaultTimeout()
-				g.Expect(results).To(Exit(0))
+				g.Expect(results).To(ExitCleanly())
 				g.Expect(results.OutputToStringArray()).To(HaveLen(3))
 			}).WithTimeout(logTimeout).Should(Succeed())
 		})
@@ -247,12 +246,12 @@ var _ = Describe("Podman logs", func() {
 
 			logc := podmanTest.Podman([]string{"run", "--log-driver", log, "-dt", ALPINE, "sh", "-c", "echo podman; echo podman; echo podman"})
 			logc.WaitWithDefaultTimeout()
-			Expect(logc).To(Exit(0))
+			Expect(logc).To(ExitCleanly())
 			cid := logc.OutputToString()
 
 			wait := podmanTest.Podman([]string{"wait", cid})
 			wait.WaitWithDefaultTimeout()
-			Expect(wait).To(Exit(0))
+			Expect(wait).To(ExitCleanly())
 
 			Eventually(func(g Gomega) {
 				now := time.Now()
@@ -260,7 +259,7 @@ var _ = Describe("Podman logs", func() {
 				nowS := now.Format(time.RFC3339)
 				results := podmanTest.Podman([]string{"logs", "--until", nowS, cid})
 				results.WaitWithDefaultTimeout()
-				g.Expect(results).To(Exit(0))
+				g.Expect(results).To(ExitCleanly())
 				g.Expect(results.OutputToStringArray()).To(HaveLen(3))
 			}).WithTimeout(logTimeout).Should(Succeed())
 		})
@@ -270,7 +269,11 @@ var _ = Describe("Podman logs", func() {
 
 			results := podmanTest.Podman([]string{"logs", "-l", "foobar"})
 			results.WaitWithDefaultTimeout()
-			Expect(results).To(ExitWithError())
+			if IsRemote() {
+				Expect(results).To(ExitWithError(125, "unknown shorthand flag: 'l' in -l"))
+			} else {
+				Expect(results).To(ExitWithError(125, "--latest and containers cannot be used together"))
+			}
 		})
 
 		It("two containers showing short container IDs: "+log, func() {
@@ -279,21 +282,21 @@ var _ = Describe("Podman logs", func() {
 
 			log1 := podmanTest.Podman([]string{"run", "--log-driver", log, "-dt", ALPINE, "sh", "-c", "echo podman; echo podman; echo podman"})
 			log1.WaitWithDefaultTimeout()
-			Expect(log1).Should(Exit(0))
+			Expect(log1).Should(ExitCleanly())
 			cid1 := log1.OutputToString()
 
 			log2 := podmanTest.Podman([]string{"run", "--log-driver", log, "-dt", ALPINE, "sh", "-c", "echo podman; echo podman; echo podman"})
 			log2.WaitWithDefaultTimeout()
-			Expect(log2).Should(Exit(0))
+			Expect(log2).Should(ExitCleanly())
 			cid2 := log2.OutputToString()
 
 			wait := podmanTest.Podman([]string{"wait", cid1, cid2})
 			wait.WaitWithDefaultTimeout()
-			Expect(wait).To(Exit(0))
+			Expect(wait).To(ExitCleanly())
 
 			results := podmanTest.Podman([]string{"logs", cid1, cid2})
 			results.WaitWithDefaultTimeout()
-			Expect(results).Should(Exit(0))
+			Expect(results).Should(ExitCleanly())
 
 			output := results.OutputToStringArray()
 			Expect(output).To(HaveLen(6))
@@ -305,11 +308,11 @@ var _ = Describe("Podman logs", func() {
 
 			session := podmanTest.Podman([]string{"create", "--log-driver", log, "--name", "log", ALPINE})
 			session.WaitWithDefaultTimeout()
-			Expect(session).To(Exit(0))
+			Expect(session).To(ExitCleanly())
 
 			results := podmanTest.Podman([]string{"logs", "log"})
 			results.WaitWithDefaultTimeout()
-			Expect(results).To(Exit(0))
+			Expect(results).To(ExitCleanly())
 		})
 
 		It("streaming output: "+log, func() {
@@ -319,19 +322,18 @@ var _ = Describe("Podman logs", func() {
 
 			logc := podmanTest.Podman([]string{"run", "--log-driver", log, "--name", containerName, "-dt", ALPINE, "sh", "-c", "echo podman-1; sleep 1; echo podman-2"})
 			logc.WaitWithDefaultTimeout()
-			Expect(logc).To(Exit(0))
+			Expect(logc).To(ExitCleanly())
 
 			results := podmanTest.Podman([]string{"logs", "-f", containerName})
 			results.WaitWithDefaultTimeout()
 
 			if log == "journald" && !isEventBackendJournald(podmanTest) {
 				// --follow + journald log-driver is only supported with journald events-backend(PR #10431)
-				Expect(results).To(Exit(125))
-				Expect(results.ErrorToString()).To(ContainSubstring("using --follow with the journald --log-driver but without the journald --events-backend"))
+				Expect(results).To(ExitWithError(125, "using --follow with the journald --log-driver but without the journald --events-backend"))
 				return
 			}
 
-			Expect(results).To(Exit(0))
+			Expect(results).To(ExitCleanly())
 
 			Expect(results.OutputToString()).To(ContainSubstring("podman-1"))
 			Expect(results.OutputToString()).To(ContainSubstring("podman-2"))
@@ -350,7 +352,7 @@ var _ = Describe("Podman logs", func() {
 
 			results = podmanTest.Podman([]string{"rm", "--time", "0", "-f", containerName})
 			results.WaitWithDefaultTimeout()
-			Expect(results).To(Exit(0))
+			Expect(results).To(ExitCleanly())
 		})
 
 		It("follow output stopped container: "+log, func() {
@@ -360,17 +362,16 @@ var _ = Describe("Podman logs", func() {
 
 			logc := podmanTest.Podman([]string{"run", "--log-driver", log, "--name", containerName, ALPINE, "true"})
 			logc.WaitWithDefaultTimeout()
-			Expect(logc).To(Exit(0))
+			Expect(logc).To(ExitCleanly())
 
 			results := podmanTest.Podman([]string{"logs", "-f", containerName})
 			results.WaitWithDefaultTimeout()
 			if log == "journald" && !isEventBackendJournald(podmanTest) {
 				// --follow + journald log-driver is only supported with journald events-backend(PR #10431)
-				Expect(results).To(Exit(125))
-				Expect(results.ErrorToString()).To(ContainSubstring("using --follow with the journald --log-driver but without the journald --events-backend"))
+				Expect(results).To(ExitWithError(125, "using --follow with the journald --log-driver but without the journald --events-backend"))
 				return
 			}
-			Expect(results).To(Exit(0))
+			Expect(results).To(ExitCleanly())
 		})
 
 		It("using container with container log-size: "+log, func() {
@@ -378,22 +379,22 @@ var _ = Describe("Podman logs", func() {
 
 			logc := podmanTest.Podman([]string{"run", "--log-driver", log, "--log-opt=max-size=10k", "-d", ALPINE, "echo", "podman podman podman"})
 			logc.WaitWithDefaultTimeout()
-			Expect(logc).To(Exit(0))
+			Expect(logc).To(ExitCleanly())
 			cid := logc.OutputToString()
 
 			wait := podmanTest.Podman([]string{"wait", cid})
 			wait.WaitWithDefaultTimeout()
-			Expect(wait).To(Exit(0))
+			Expect(wait).To(ExitCleanly())
 
 			inspect := podmanTest.Podman([]string{"container", "inspect", "--format", "{{.HostConfig.LogConfig.Size}}", cid})
 			inspect.WaitWithDefaultTimeout()
-			Expect(inspect).To(Exit(0))
+			Expect(inspect).To(ExitCleanly())
 			Expect(inspect.OutputToString()).To(Equal("10kB"))
 
 			Eventually(func(g Gomega) {
 				results := podmanTest.Podman([]string{"logs", cid})
 				results.WaitWithDefaultTimeout()
-				g.Expect(results).To(Exit(0))
+				g.Expect(results).To(ExitCleanly())
 				g.Expect(results.OutputToString()).To(Equal("podman podman podman"))
 			}).WithTimeout(logTimeout).Should(Succeed())
 		})
@@ -403,16 +404,16 @@ var _ = Describe("Podman logs", func() {
 
 			logc := podmanTest.Podman([]string{"run", "--log-driver", log, "--name", "test", ALPINE, "sh", "-c", "echo 1; echo 2"})
 			logc.WaitWithDefaultTimeout()
-			Expect(logc).To(Exit(0))
+			Expect(logc).To(ExitCleanly())
 
 			wait := podmanTest.Podman([]string{"wait", "test"})
 			wait.WaitWithDefaultTimeout()
-			Expect(wait).To(Exit(0))
+			Expect(wait).To(ExitCleanly())
 
 			Eventually(func(g Gomega) {
 				results := podmanTest.Podman([]string{"logs", "test"})
 				results.WaitWithDefaultTimeout()
-				g.Expect(results).To(Exit(0))
+				g.Expect(results).To(ExitCleanly())
 				outlines := results.OutputToStringArray()
 				g.Expect(outlines).To(HaveLen(2))
 				g.Expect(outlines[0]).To(Equal("1"))
@@ -430,7 +431,7 @@ var _ = Describe("Podman logs", func() {
 
 			wait := podmanTest.Podman([]string{"wait", cname})
 			wait.WaitWithDefaultTimeout()
-			Expect(wait).To(Exit(0))
+			Expect(wait).To(ExitCleanly())
 
 			Eventually(func(g Gomega) {
 				results := podmanTest.Podman([]string{"logs", cname})
@@ -449,7 +450,7 @@ var _ = Describe("Podman logs", func() {
 			// use printf to print no extra newline
 			logc := podmanTest.Podman([]string{"run", "--log-driver", log, "--name", cname, ALPINE, "printf", content})
 			logc.WaitWithDefaultTimeout()
-			Expect(logc).To(Exit(0))
+			Expect(logc).To(ExitCleanly())
 			// Important: do not use OutputToString(), this will remove the trailing newline from the output.
 			// However this test must make sure that there is no such extra newline.
 			Expect(string(logc.Out.Contents())).To(Equal(content))
@@ -457,7 +458,7 @@ var _ = Describe("Podman logs", func() {
 			Eventually(func(g Gomega) {
 				logs := podmanTest.Podman([]string{"logs", cname})
 				logs.WaitWithDefaultTimeout()
-				g.Expect(logs).To(Exit(0))
+				g.Expect(logs).To(ExitCleanly())
 				// see comment above
 				g.Expect(string(logs.Out.Contents())).To(Equal(content))
 			}).WithTimeout(logTimeout).Should(Succeed())
@@ -474,29 +475,29 @@ var _ = Describe("Podman logs", func() {
 
 			testPod := podmanTest.Podman([]string{"pod", "create", fmt.Sprintf("--name=%s", podName)})
 			testPod.WaitWithDefaultTimeout()
-			Expect(testPod).To(Exit(0))
+			Expect(testPod).To(ExitCleanly())
 
 			log1 := podmanTest.Podman([]string{"run", "--log-driver", log, "--name", containerName1, "--pod", podName, BB, "echo", "log1"})
 			log1.WaitWithDefaultTimeout()
-			Expect(log1).To(Exit(0))
+			Expect(log1).To(ExitCleanly())
 
 			log2 := podmanTest.Podman([]string{"run", "--log-driver", log, "--name", containerName2, "--pod", podName, BB, "echo", "log2"})
 			log2.WaitWithDefaultTimeout()
-			Expect(log2).To(Exit(0))
+			Expect(log2).To(ExitCleanly())
 
 			ctr := podmanTest.Podman([]string{"run", "--log-driver", log, "--name", containerName3, BB, "date"})
 			ctr.WaitWithDefaultTimeout()
-			Expect(ctr).To(Exit(0))
+			Expect(ctr).To(ExitCleanly())
 
 			Eventually(func(g Gomega) {
 				results := podmanTest.Podman([]string{"pod", "logs", "-l"})
 				results.WaitWithDefaultTimeout()
-				g.Expect(results).To(Exit(0))
+				g.Expect(results).To(ExitCleanly())
 				podOutput := results.OutputToString()
 
 				results = podmanTest.Podman([]string{"logs", "-l"})
 				results.WaitWithDefaultTimeout()
-				g.Expect(results).To(Exit(0))
+				g.Expect(results).To(ExitCleanly())
 				ctrOutput := results.OutputToString()
 
 				g.Expect(podOutput).ToNot(Equal(ctrOutput))
@@ -513,20 +514,20 @@ var _ = Describe("Podman logs", func() {
 
 			testPod := podmanTest.Podman([]string{"pod", "create", fmt.Sprintf("--name=%s", podName)})
 			testPod.WaitWithDefaultTimeout()
-			Expect(testPod).To(Exit(0))
+			Expect(testPod).To(ExitCleanly())
 
 			log1 := podmanTest.Podman([]string{"run", "--log-driver", log, "--name", containerName1, "--pod", podName, BB, "echo", "log1"})
 			log1.WaitWithDefaultTimeout()
-			Expect(log1).To(Exit(0))
+			Expect(log1).To(ExitCleanly())
 
 			log2 := podmanTest.Podman([]string{"run", "--log-driver", log, "--name", containerName2, "--pod", podName, BB, "echo", "log2"})
 			log2.WaitWithDefaultTimeout()
-			Expect(log2).To(Exit(0))
+			Expect(log2).To(ExitCleanly())
 
 			Eventually(func(g Gomega) {
 				results := podmanTest.Podman([]string{"pod", "logs", "-l"})
 				results.WaitWithDefaultTimeout()
-				g.Expect(results).To(Exit(0))
+				g.Expect(results).To(ExitCleanly())
 				output := results.OutputToString()
 				g.Expect(output).To(ContainSubstring("log1"))
 				g.Expect(output).To(ContainSubstring("log2"))
@@ -536,20 +537,20 @@ var _ = Describe("Podman logs", func() {
 
 	It("using journald for container with container tag", func() {
 		SkipIfJournaldUnavailable()
-		logc := podmanTest.Podman([]string{"run", "--log-driver", "journald", "--log-opt=tag={{.ImageName}}", "-d", ALPINE, "sh", "-c", "echo podman; sleep 0.1; echo podman; sleep 0.1; echo podman"})
+		logc := podmanTest.Podman([]string{"run", "--log-driver", "journald", "--log-opt=tag={{.ImageName}},withcomma", "-d", ALPINE, "sh", "-c", "echo podman; sleep 0.1; echo podman; sleep 0.1; echo podman"})
 		logc.WaitWithDefaultTimeout()
-		Expect(logc).To(Exit(0))
+		Expect(logc).To(ExitCleanly())
 		cid := logc.OutputToString()
 
 		wait := podmanTest.Podman([]string{"wait", cid})
 		wait.WaitWithDefaultTimeout()
-		Expect(wait).To(Exit(0))
+		Expect(wait).To(ExitCleanly())
 
 		Eventually(func(g Gomega) {
 			cmd := exec.Command("journalctl", "--no-pager", "-o", "json", "--output-fields=CONTAINER_TAG", fmt.Sprintf("CONTAINER_ID_FULL=%s", cid))
 			out, err := cmd.CombinedOutput()
 			g.Expect(err).ToNot(HaveOccurred())
-			g.Expect(string(out)).To(ContainSubstring("alpine"))
+			g.Expect(string(out)).To(ContainSubstring(ALPINE + ",withcomma"))
 		}).Should(Succeed())
 	})
 
@@ -558,12 +559,12 @@ var _ = Describe("Podman logs", func() {
 		containerName := "inside-journal"
 		logc := podmanTest.Podman([]string{"run", "--log-driver", "journald", "-d", "--name", containerName, ALPINE, "sh", "-c", "echo podman; sleep 0.1; echo podman; sleep 0.1; echo podman"})
 		logc.WaitWithDefaultTimeout()
-		Expect(logc).To(Exit(0))
+		Expect(logc).To(ExitCleanly())
 		cid := logc.OutputToString()
 
 		wait := podmanTest.Podman([]string{"wait", cid})
 		wait.WaitWithDefaultTimeout()
-		Expect(wait).To(Exit(0))
+		Expect(wait).To(ExitCleanly())
 
 		Eventually(func(g Gomega) {
 			cmd := exec.Command("journalctl", "--no-pager", "-o", "json", "--output-fields=CONTAINER_NAME", fmt.Sprintf("CONTAINER_ID_FULL=%s", cid))
@@ -577,12 +578,11 @@ var _ = Describe("Podman logs", func() {
 		ctrName := "logsctr"
 		logc := podmanTest.Podman([]string{"run", "--name", ctrName, "-d", "--log-driver", "none", ALPINE, "top"})
 		logc.WaitWithDefaultTimeout()
-		Expect(logc).To(Exit(0))
+		Expect(logc).To(ExitCleanly())
 
 		logs := podmanTest.Podman([]string{"logs", "-f", ctrName})
 		logs.WaitWithDefaultTimeout()
-		Expect(logs).To(Exit(125))
-		Expect(logs.ErrorToString()).To(ContainSubstring("this container is using the 'none' log driver, cannot read logs: this container is not logging output"))
+		Expect(logs).To(ExitWithError(125, "this container is using the 'none' log driver, cannot read logs: this container is not logging output"))
 	})
 
 	It("podman logs with non ASCII log tag fails without correct LANG", func() {
@@ -595,13 +595,10 @@ var _ = Describe("Podman logs", func() {
 		defer cleanup()
 		logc := podmanTest.Podman([]string{"run", "--log-driver", "journald", "--log-opt", "tag=äöüß", ALPINE, "echo", "podman"})
 		logc.WaitWithDefaultTimeout()
-		Expect(logc).To(Exit(126))
+		Expect(logc).To(ExitWithError(126, "conmon failed: exit status 1"))
 		if !IsRemote() {
-			// Error is only seen on local client
-			// Why does conmon log this to stdout? This must be fixed after https://github.com/containers/conmon/pull/447.
-			Expect(logc.OutputToString()).To(Equal("conmon: option parsing failed: Invalid byte sequence in conversion input"))
+			Expect(logc.ErrorToString()).To(ContainSubstring("conmon: option parsing failed: Invalid byte sequence in conversion input"))
 		}
-		Expect(logc.ErrorToString()).To(ContainSubstring("conmon failed: exit status 1"))
 	})
 
 	It("podman logs with non ASCII log tag succeeds with proper env", func() {
@@ -613,7 +610,7 @@ var _ = Describe("Podman logs", func() {
 		defer cleanup()
 		logc := podmanTest.Podman([]string{"run", "--log-driver", "journald", "--log-opt", "tag=äöüß", ALPINE, "echo", "podman"})
 		logc.WaitWithDefaultTimeout()
-		Expect(logc).To(Exit(0))
+		Expect(logc).To(ExitCleanly())
 		Expect(logc.OutputToString()).To(Equal("podman"))
 	})
 
@@ -625,20 +622,20 @@ var _ = Describe("Podman logs", func() {
 
 		testPod := podmanTest.Podman([]string{"pod", "create", fmt.Sprintf("--name=%s", podName)})
 		testPod.WaitWithDefaultTimeout()
-		Expect(testPod).To(Exit(0))
+		Expect(testPod).To(ExitCleanly())
 
 		log1 := podmanTest.Podman([]string{"run", "--name", containerName1, "--pod", podName, BB, "echo", "log1"})
 		log1.WaitWithDefaultTimeout()
-		Expect(log1).To(Exit(0))
+		Expect(log1).To(ExitCleanly())
 
 		log2 := podmanTest.Podman([]string{"run", "--name", containerName2, "--pod", podName, BB, "echo", "log2"})
 		log2.WaitWithDefaultTimeout()
-		Expect(log2).To(Exit(0))
+		Expect(log2).To(ExitCleanly())
 
 		Eventually(func(g Gomega) {
 			results := podmanTest.Podman([]string{"pod", "logs", "--names", podName})
 			results.WaitWithDefaultTimeout()
-			g.Expect(results).To(Exit(0))
+			g.Expect(results).To(ExitCleanly())
 
 			output := results.OutputToStringArray()
 			g.Expect(output).To(HaveLen(2))
@@ -653,18 +650,18 @@ var _ = Describe("Podman logs", func() {
 		containerName2 := "container2"
 		testPod := podmanTest.Podman([]string{"pod", "create", fmt.Sprintf("--name=%s", podName)})
 		testPod.WaitWithDefaultTimeout()
-		Expect(testPod).To(Exit(0))
+		Expect(testPod).To(ExitCleanly())
 		log1 := podmanTest.Podman([]string{"run", "--name", containerName1, "--pod", podName, BB, "echo", "log1"})
 		log1.WaitWithDefaultTimeout()
-		Expect(log1).To(Exit(0))
+		Expect(log1).To(ExitCleanly())
 		log2 := podmanTest.Podman([]string{"run", "--name", containerName2, "--pod", podName, BB, "echo", "log2"})
 		log2.WaitWithDefaultTimeout()
-		Expect(log2).To(Exit(0))
+		Expect(log2).To(ExitCleanly())
 
 		Eventually(func(g Gomega) {
 			results := podmanTest.Podman([]string{"pod", "logs", "--color", podName})
 			results.WaitWithDefaultTimeout()
-			g.Expect(results).To(Exit(0))
+			g.Expect(results).To(ExitCleanly())
 			output := results.OutputToStringArray()
 			g.Expect(output).To(HaveLen(2))
 			g.Expect(output[0]).To(MatchRegexp(`\x1b\[3[0-9a-z ]+\x1b\[0m`))

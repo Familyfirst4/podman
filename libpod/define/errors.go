@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	"github.com/containers/common/libnetwork/types"
-	"github.com/containers/common/pkg/util"
+	"github.com/containers/common/pkg/detach"
 )
 
 var (
@@ -60,6 +60,8 @@ var (
 	// ErrCtrStateInvalid indicates a container is in an improper state for
 	// the requested operation
 	ErrCtrStateInvalid = errors.New("container state improper")
+	// ErrCtrStateRunning indicates a container is running.
+	ErrCtrStateRunning = errors.New("container is running")
 	// ErrExecSessionStateInvalid indicates that an exec session is in an
 	// improper state for the requested operation
 	ErrExecSessionStateInvalid = errors.New("exec session state improper")
@@ -93,7 +95,7 @@ var (
 
 	// ErrDetach indicates that an attach session was manually detached by
 	// the user.
-	ErrDetach = util.ErrDetach
+	ErrDetach = detach.ErrDetach
 
 	// ErrWillDeadlock indicates that the requested operation will cause a
 	// deadlock. This is usually caused by upgrade issues, and is resolved

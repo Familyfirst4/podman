@@ -1,6 +1,7 @@
 package ssh
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -80,7 +81,7 @@ func ReadPassword(prompt string) (pw []byte, err error) {
 			pw = append(pw, b[0])
 			// limit size, so that a wrong input won't fill up the memory
 			if len(pw) > 1024 {
-				err = fmt.Errorf("password too long, 1024 byte limit")
+				err = errors.New("password too long, 1024 byte limit")
 			}
 		}
 		if err != nil {
@@ -145,7 +146,7 @@ func ParseScpArgs(options ConnectionScpOptions) (string, string, string, bool, e
 	if strings.Contains(localPath, "ssh://") {
 		localPath = strings.Split(localPath, "ssh://")[1]
 	}
-	remotePath := ""
+	var remotePath string
 	swap := false
 	if split := strings.Split(localPath, ":"); len(split) == 2 {
 		// save to remote, load to local
@@ -156,7 +157,7 @@ func ParseScpArgs(options ConnectionScpOptions) (string, string, string, bool, e
 	} else {
 		split = strings.Split(host, ":")
 		if len(split) != 2 {
-			return "", "", "", false, fmt.Errorf("no remote destination provided")
+			return "", "", "", false, errors.New("no remote destination provided")
 		}
 		host = split[0]
 		remotePath = split[1]

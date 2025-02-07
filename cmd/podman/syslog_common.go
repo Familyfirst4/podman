@@ -1,17 +1,17 @@
 //go:build linux || freebsd
-// +build linux freebsd
 
 package main
 
 import (
 	"log/syslog"
 
+	"github.com/containers/podman/v5/cmd/podman/registry"
 	"github.com/sirupsen/logrus"
 	logrusSyslog "github.com/sirupsen/logrus/hooks/syslog"
 )
 
 func syslogHook() {
-	if !useSyslog {
+	if !registry.PodmanConfig().Syslog {
 		return
 	}
 
